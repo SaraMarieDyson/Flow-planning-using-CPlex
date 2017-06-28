@@ -1,0 +1,576 @@
+# Flow-planning-using-CPlex
+An assignment at university by my partner Stephanie Rowe and myself balancing traffic over a network, using CPLEX
+
+COSC364 Assignment 2
+Flow Planning
+Sara Dyson (50%), 67458235
+Stephanie Rowe (50%), 56742351The objective function for this problem is: Minimize r . In order to balance the traffic load over all
+flows, we need to balance this load across all of the transit nodes. To do this, we have introduced the
+variable r and we minimize this variable while also making sure that it is larger than the loads on
+every transit node in the network. Since r is at its minimum when the load is spread across the
+available transit nodes as evenly as possible, this is a suitable objective function for the load
+balancing problem.
+The number of source nodes, transit nodes and destination nodes are given by the user. In order to
+descibe the mathematics used to generate the linear program file, we will say that there are X
+different source nodes, Y different transit nodes and Z different destination nodes.
+Y
+The function
+∑ x ikj =i+ j , k ∈ { 1,. .. ,Y }
+calculates the demand constraints and defines how the
+k=0
+decision variables relate to them. We were told in the assignment specifications that the demand
+volume h ij = i + j, so the right hand side of this equation is just the demand volume between source
+node i and destination node j. This demand volume is going to be spread over different paths that
+use different transit nodes, so the total demand volume i + j is the sum of all of the data going from
+source i to destination j over all Y transit nodes. We need to sum over all possible transit nodes
+because we don’t know which transit nodes are being used to carry parts of the demand volume and
+which are not.
+The equations defined by x ikj =u ikj ×
+i+ j
+, i∈ { 1,. .. , X } ,k ∈ { 1,... ,Y } , j∈ { 1,. .. , Z } define the
+3
+value of x ikj , which is the amount of data being sent over an entire path. Again, i+j refers to the
+demand volume between source node i and destination node j. The assignment specifications stated
+that we needed to divide the demand volume across exactly three paths, assuming that all transit
+nodes are equally capable, so the amount of data moving across any one path from source node i to
+destination node j is either
+i+ j
+or 0. The u ikj variable is a binary variable that indicates whether a
+3
+particular path ikj is being used. If the path ikj is being used, then u ikj = 1 and the amount of data
+i+ j
+. If the path ikj is not being used to transfer part of the
+3
+i+ j
+demand volume, then u ikj = 0 and the amount of data on the path is 0 ×
+= 0.
+3
+travelling on that path will be
+1×z
+The equations defined by
+∑ x ikj =c ik ,i ∈ { 1,... , X } , k ∈ { 1,. .. ,Y }
+represent the capacity
+j=0
+constraints on the links that attach source nodes to transit nodes. All of the data that uses the link
+from source node i to transit node k will originate from source node i. Once this data reaches transit
+node k, the data will split into pieces and each piece will move towards the different destination
+nodes depending on which destination that particular piece of data needs to reach. This means that
+the sum of all of the data flows that use the link ik will be the sum of all flows x ikj for all possible
+destination nodes j. This sum must be less than or equal to the capacity of link ik so that it is possible
+for the link ik to be able carry this amount of data. If we set the sum of flows that use the link ik to be
+equal to the capacity of the link, then we can determine the minimum capacity that this link must
+have in order to carry all of the traffic that will go through it.
+Similarly, the amount of data going through the link kj is the sum of all flows that will use this link,
+regardless of their source vertex. The capacities of these links is represented by
+X
+∑ x ikj =d kj ,k ∈ { 1,... , Y } , j∈ { 1,. .. , Z }
+.The sum of all flows through the link kj must be less than
+i=0
+or equal to the capacity of the link kj in order to avoid having more traffic on a link than the link can
+hold. In order to calculate the minimum possible capacity of each link kj, we had this capacity equal
+the sum of the flows that use this link.
+The variable r is the maximum amount of flow that will ever go through any transit node in the
+network. This value is minimized in our optimization function, as minimizing r also minimizes the
+amount of data that can go through any transit node. The variable r is minimized when the transit
+nodes share the traffic between them as evenly as possible, as increasing the volumne of one nodes
+traffic above the traffic volumes of the other nodes will increase r. The constraints
+X
+Z
+r ≥ ∑ ∑ x ikj , k ∈ { 1,. .., Y } will calculate the flow through each transit node k and will make sure
+i=0 j=0
+that r is greater than or equal to all of these flows.
+Y
+The constraints
+∑ u ikj =3 ,i ∈ { 1,. .. , X } , j ∈ { 1,. .. , Z }
+limit the number of paths that can be used
+k=0
+to send data between a source node i and a destination node j. The binary variables u ikj indicate
+whether a path will be used to transport this data. Since u ikj = 1 if a path can be used and we must
+use exactly three paths (as specified in the assignment), the binary variables of all paths between i
+and j must sum to three.
+The constraints 0 ≤u ikj ≤ 1, i∈ { 1,... , X } , k ∈ { 1,. .., Y } , j ∈ { 1,... , Z } ensure that the binary
+variables never exceed one and never become lower than zero. This is covered by the ‘Binary’
+specification in the linear program file, as CPLEX automatically assumes these bounds for variables
+that are declared to be binary.The non-negativity constraints of the linear program are as follows:
+x ikj ≥ 0,i ∈ { 1,. .. , X } , k ∈ { 1,. .. ,Y } , j ∈ { 1,. .. , Z }
+r ≥0
+c ik ≥ 0 ,i ∈ { 1,. .. , X } , k ∈ { 1,. .. ,Y }
+d kj ≥ 0, k ∈ { 1,... , Y } , j∈ { 1,... , Z }
+These constraints make sure that the amount of flow through a path, the sum of flows through a
+transit node, the capacity of all links ik and the capacity of all links kj are all positive numbers or they
+are equal to zero. If these values were able to be negative, the solutions given by the linear program
+might include negative flows, capacities or sums of flows. Setting these varaibles to negative values is
+not realistic, as a link with negative capacity or a path that carries a negative amount of data are not
+possible in a real life scenario. Making sure that the flows and capacities are non-negative gives us
+the best chance at finding viable and sensible answers.
+We also included some variables that told us the amount of data going through each transit node.
+These values were calculated by summing the amount of data going through the paths that used
+each transit node, like so:
+X
+Z
+sk = ∑ ∑ x ikj , k ∈ { 1,. .., Y }
+i=0 j=0
+Linear program files were generated for X= 7, Z = 7, where Y could be any value between 3 and 7. Our
+results are recorded in the following table:
+Y Value Load on Transit
+Nodes CPLEX Execution
+Time Number of links
+with non-zero
+capacities Highest capacity
+link(s)
+3 130.67 (for all
+transit nodes) 0.0005 seconds 42/42 C71, C72, C73,
+D37, D27, D17 =
+25.67
+4 98.0 (for all transit 0.0008 seconds
+nodes) 56/56 C62, D26 = 23.33
+5 S1 = 78; s2,s3 =
+78.33; s4,s5 =
+78.33 0.0005 seconds 68/70 D27 = 25.67
+6 65.33 (for all
+transit nodes) 0.0006 seconds 74/84 D37 = 25.67
+7 56.0 (for all transit 0.0004 seconds
+nodes) 92/98 C74 = 21.67We made a few observations when testing and reading our resulting data. Firstly, as we increased the
+number of transit nodes in the network; the load on the transit nodes decreasesd. This result is
+expected as increasing the number of transit nodes will result in spreading out the load. When we
+were testing three, four, six and seven transit nodes, the values across all transit nodes were evenly
+distributed.
+The exception to this was when we were testing a network with five transit nodes, in which case we
+had three different values. The summation of traffic passing through each transit node was as
+follows: s1 had a load of 78; s2 and s3 had a load of 78.33 and s4 and s5 have a load of 78.33. This is
+likely because the total demand volume of the starting nodes could not be divided by five. This
+would mean that the load could not be spread evenly across all five transit nodes, and some nodes
+had to carry more data than others.
+We were perplexed by the variation of the running times of our program. We wondered whether it
+was a potential error that we were not able to find, or if some of the other processes that were also
+running on the computer could have intereferred. Perhaps if we were working with larger networks,
+we may see more accurate timing and a larger difference between the times taken.
+We also noted that all links were utilized when we had three and four transit nodes, yet as we
+increased the number of transit nodes we noticed that not all links were utilized. This is possibly due
+to the increase in transit nodes, as more links would be available in the network and some of these
+links might not be needed in an optimal solution. There was a noticable increase in the ratio of links
+that weren’t being used when we had six transit nodes. We noticed that most of the unused paths
+were between transit nodes and destination nodes. One possible reason for the decrease in links
+used is that the data that reached each transit node only needed to be sent to a few destinations
+from that node. In other words, each node accumulated data destined only for certain destination
+nodes. We would need more data and a more advanced version of CPLEX to be sure.
+There was a noticable correlation between the ratio of the links being used and the capacity of the
+highest capacity links. When testing with three and four transit nodes, we noted that there was more
+than one link with the highest capacity. This makes sense because there were less transit nodes and
+the data had to pass through less links. This means that the data would have been divided more
+evenly, as there is more burden on the links between source, transit and destination nodes . If there
+were more links, then many links could carry less data, while fewer links would need to carry the
+majority of the data. When testing five transit nodes, the maximum capacity increased to 25.67 (the
+same as the maximum capacity for the three transit node network) and remained at that value when
+testing six transit nodes in the network. We also noticed that there was big decrease to 21.67 when
+testing seven transit nodes. We initially hypothesized that the highest capacity of a link in a network
+would decrease as the number of transit nodes increased, as the data could be spread out over more
+links. The increase of a links maximum capacity for five transit nodes suprised us, but this increase
+could be explained by their being less links used in that network. Similarly, far fewer links were used
+when six transit nodes were in the network, which would explain why there was no change in value
+between networks with five and six transit nodes. The seven transit node network used more links
+than the six transit node network and had a decrease in the maximum link capacity, which supports
+our original hypothesis.Appendices
+Appendix 1: Source code used to generate linear program files
+1 import subprocess
+2 import re
+3 import itertools
+4 import time
+5
+6
+7
+class Vars(object):
+8 """class for variables that formats s for source, t for transit and d for
+9 dest where applicable.
+10
+11 Attributes:
+12 name --
+13 s_index -- source index
+14 t_index -- transit index
+15 d_index -- destination index
+16 """
+17 def __init__(self, name, s_index = None, t_index= None, d_index= None):
+18 self.name = name
+19 self.s = s_index
+20 self.t = t_index
+21 self.d = d_index
+22
+23 def __repr__(self):
+24 if self.s == None:25
+26
+27
+28
+29
+30
+31
+return "{}{}{}".format(self.name, self.t, self.d)
+elif self.t == None:
+return "{}{}{}".format(self.name, self.s, self.d) #Just in case
+elif self.d == None:
+return "{}{}{}".format(self.name, self.s, self.t)
+else:
+return "{}{}{}{}".format(self.name, self.s, self.t, self.d)
+32
+33 class NetworkFlow(object):
+34 """class for constants and methods for claculating network flow, using CPLEX
+35 to run the simplex algorithm to produce LP files
+36
+37 Attributes:
+38 X -- variable for source nodes X
+39 Y -- variable for source nodes Y
+40 Z -- variable for source nodes Z
+41 source -- list of source nodes(X)
+42 transit -- list of transit nodes (Y)
+43 destination -- list of destination nodes (Z)
+44 Xikj -- Assigning flow variable x to indicies ijk
+45 Uikj -- Assigning binary variable u to indicies ijk
+46 Cik -- Assigning capacity variable c to indicies ij
+47 Dkj -- Assigning capacity variable d to indicies kj
+48
+49 Methods:
+50 non_neg_constraints -- sets non-negative constraints
+51 demand_volume_constraints -- sets demand volume constraints
+52 capacity_constraints -- sets the capacity constraints on a link53 sums_constraint -- sums the flows going through each transit node
+54 r_constraints -- creates constraints involving r
+55 u_constraint -- creates constraints involving u
+56 binary_constraints -- sets the u variables to be binary variables
+57 """
+58 def __init__(self, X, Y, Z):
+59 self.divisor = 3 # eliminating magic numbers
+60 self.X = X
+61 self.Y = Y
+62 self.Z = Z
+63 self.source = [str(src) for src in range(1, self.X+1)]
+64 self.transit = [str(tran) for tran in range(1, self.Y+1)]
+65 self.destination = [str(dest) for dest in range(1, self.Z+1)]
+66 self.Xikj = [Vars('x',src,trs,dest) for src in self.source \
+67
+68
+69
+70
+71
+72
+73
+for trs in self.transit for dest in self.destination]
+self.Uikj = [Vars('u',src,trs,dest) for src in self.source \
+for trs in self.transit for dest in self.destination]
+self.Cik = [Vars('c',src,trs) for src in self.source \
+for trs in self.transit]
+self.Dkj = [Vars('d',trs, dest) for trs in self.transit \
+for dest in self.destination]
+74
+75
+def non_neg_constraints(self):
+76 """sets Non-negative Constraints"""
+77 non_neg_constraints = ['Bounds\n','r >= 0 \n']
+78 for x in self.Xikj:
+79
+80
+non_neg_constraints.append(str(x) + " >= 0 \n")
+for c in self.Cik:81
+82
+83
+84
+non_neg_constraints.append(str(c) + " >= 0 \n")
+for d in self.Dkj:
+non_neg_constraints.append(str(d) + " >= 0 \n")
+return non_neg_constraints
+85
+86
+def demand_volume_constraints(self):
+87 """Sets the constraints for demand volume on a link"""
+88 dem_vol_constraints1 = []
+89 dem_vol_constraints2 = []
+90 for i in range(1,self.X + 1):
+91
+92
+for j in range(1,self.Z + 1):
+x_collect = [item for item in self.Xikj if item.s == str(i)\
+93
+94
+and item.d == str(j)]
+string = "".join(str(item) if item == x_collect[-1] \
+95 else str(item) + " + " for item in x_collect)
+96 dem_vol_constraints1.append(string + " = " + str(i + j) + " \n")
+97
+98
+99
+for x in self.Xikj:
+for u in self.Uikj:
+if x.s == u.s and x.d == u.d and x.t == u.t:
+100 calc = (float(x.s) + float(x.d)) / self.divisor
+101 dem_vol_constraints2.append("{} {} - {} = 0 \n"\
+102
+103
+.format(calc, u, x))
+return dem_vol_constraints1, dem_vol_constraints2
+104
+105
+def capacity_constraints(self):
+106 """sets a capacity constraints on a link"""
+107 capp_1 = []
+108 capp_2 = []109
+110
+111
+112
+113
+for i in range(1,self.X + 1):
+for k in range(1,self.Y + 1):
+x_collect = [item for item in self.Xikj if item.s == str(i) \
+and item.t == str(k)]
+string = "".join(str(x) + " + " if x != x_collect[-1] \
+114 else str(x) + " - c" + str(i) + str(k) \
+115 + " = 0 \n" for x in x_collect)
+116
+117
+118
+119
+120
+121
+capp_1.append(string)
+for k in range(1,self.Y + 1):
+for j in range(1,self.Z + 1):
+x_collect = [item for item in self.Xikj if item.t == str(k) \
+and item.d == str(j)]
+string = "".join(str(x) + " + " if x != x_collect[-1] \
+122 else str(x) + " - d" + str(k) + str(j) + \
+123 " = 0 \n" for x in x_collect)
+124
+125
+capp_2.append(string)
+return capp_1, capp_2
+126
+127
+def sums_constraint(self):
+128 """A function that sums the traffic passing through a transit node"""
+129 sums_const = []
+130 for k in range(1, self.Y + 1):
+131 x_collect = [item for item in self.Xikj if item.t == str(k)]
+132 string = "".join(str(item) + " + " if item != x_collect[-1] \
+133 else str(item) + " - s" + str(k) + " = 0\n" \
+134 for item in x_collect)
+135
+136
+sums_const.append(string)
+return sums_const137
+138
+def r_constraints(self):
+139 """calculates the variable for r"""
+140 r_const = []
+141 for k in range(1, self.Y + 1):
+142 x_collect = [item for item in self.Xikj if item.t == str(k)]
+143 r_string = "".join(str(item) + " + " if item != x_collect[-1] \
+144 else str(item) + " - r <= 0 \n" \
+145 for item in x_collect)
+146
+147
+r_const.append(r_string)
+return r_const
+148
+149
+def u_constraint(self):
+150 """calculates the variable for u"""
+151 u_const = []
+152 for i in range(1, self.X + 1):
+153
+154
+155
+156
+for j in range(1, self.Z + 1):
+u_collect = [item for item in self.Uikj if item.s == str(i)\
+and item.d == str(j)]
+string = "".join(str(item) + ' + ' if item != u_collect[-1] \
+157 else str(item) + ' = {} \n'\
+158 .format(self.divisor) for item in u_collect)
+159
+160
+u_const.append(string)
+return u_const
+161
+162 def binary_constraints(self):
+163 """Binary Constraints"""
+164 bin_constraints = ["Binary\n"]165
+166
+167
+for u in self.Uikj:
+bin_constraints.append(str(u) + "\n")
+return bin_constraints
+168
+169 def main():
+170 start_time = int(time.time())
+171 x_num = input("Enter number of source nodes: ")
+172 y_num = input("Enter number of transit nodes: ")
+173 z_num = input("Enter number of destination nodes: ")
+174 n = NetworkFlow(x_num,y_num,z_num)
+175 lp = ['Minimize \n', 'r\n', 'Subject to \n']
+176
+177 demand_a, demand_b = n.demand_volume_constraints()
+178 cap_a, cap_b = n.capacity_constraints()
+179 lp.extend(demand_a) # Indexing into a list
+180 lp.extend(demand_b)
+181 lp.extend(cap_a)
+182 lp.extend(cap_b)
+183 lp.extend(n.r_constraints())
+184 lp.extend(n.u_constraint())
+185 lp.extend(n.sums_constraint())
+186 lp.extend(n.non_neg_constraints())
+187 lp.extend(n.binary_constraints())
+188 lp.append('End')
+189 print(len(lp))
+190
+191 string = open('network_flow.lp','w')
+192 for item in lp:193
+194
+195
+try:
+string.write(item)
+except Exception as ERROR:
+196 print(item)
+197 raise ERROR
+198 string.close()
+199 args = ('cplex -c \"read network_flow.lp\" \"optimize\" \"display solution \
+200 variables -\"')
+201 proc = subprocess.Popen(args, stdout=subprocess.PIPE, shell=True)
+202 for line in proc.stdout.readlines():
+203
+print(line)
+204
+205 time_elapsed = int(time.time())
+206 print("The file took {} seconds to run!".\
+207
+format(float((time_elapsed - start_time)) * 0.0001))
+208
+209 if __name__ == "__main__":
+210
+main()Appendix 2: Linear program file generated when X = 3, Y = 2 and Z = 4
+Minimize
+r
+Subject to
+x111 + x121 = 2
+x112 + x122 = 3
+x113 + x123 = 4
+x114 + x124 = 5
+x211 + x221 = 3
+x212 + x222 = 4
+x213 + x223 = 5
+x214 + x224 = 6
+x311 + x321 = 4
+x312 + x322 = 5
+x313 + x323 = 6
+x314 + x324 = 7
+0.666666666667 u111 - x111 = 0
+1.0 u112 - x112 = 0
+1.33333333333 u113 - x113 = 0
+1.66666666667 u114 - x114 = 0
+0.666666666667 u121 - x121 = 0
+1.0 u122 - x122 = 0
+1.33333333333 u123 - x123 = 0
+1.66666666667 u124 - x124 = 0
+1.0 u211 - x211 = 0
+1.33333333333 u212 - x212 = 0
+1.66666666667 u213 - x213 = 0
+2.0 u214 - x214 = 0
+1.0 u221 - x221 = 0
+1.33333333333 u222 - x222 = 01.66666666667 u223 - x223 = 0
+2.0 u224 - x224 = 0
+1.33333333333 u311 - x311 = 0
+1.66666666667 u312 - x312 = 0
+2.0 u313 - x313 = 0
+2.33333333333 u314 - x314 = 0
+1.33333333333 u321 - x321 = 0
+1.66666666667 u322 - x322 = 0
+2.0 u323 - x323 = 0
+2.33333333333 u324 - x324 = 0
+x111 + x112 + x113 + x114 - c11 = 0
+x121 + x122 + x123 + x124 - c12 = 0
+x211 + x212 + x213 + x214 - c21 = 0
+x221 + x222 + x223 + x224 - c22 = 0
+x311 + x312 + x313 + x314 - c31 = 0
+x321 + x322 + x323 + x324 - c32 = 0
+x111 + x211 + x311 - d11 = 0
+x112 + x212 + x312 - d12 = 0
+x113 + x213 + x313 - d13 = 0
+x114 + x214 + x314 - d14 = 0
+x121 + x221 + x321 - d21 = 0
+x122 + x222 + x322 - d22 = 0
+x123 + x223 + x323 - d23 = 0
+x124 + x224 + x324 - d24 = 0
+x111 + x112 + x113 + x114 + x211 + x212 + x213 + x214 + x311 + x312 + x313 + x314 - r <= 0
+x121 + x122 + x123 + x124 + x221 + x222 + x223 + x224 + x321 + x322 + x323 + x324 - r <= 0
+u111 + u121 = 3
+u112 + u122 = 3
+u113 + u123 = 3
+u114 + u124 = 3
+u211 + u221 = 3u212 + u222 = 3
+u213 + u223 = 3
+u214 + u224 = 3
+u311 + u321 = 3
+u312 + u322 = 3
+u313 + u323 = 3
+u314 + u324 = 3
+x111 + x112 + x113 + x114 + x211 + x212 + x213 + x214 + x311 + x312 + x313 + x314 - s1 = 0
+x121 + x122 + x123 + x124 + x221 + x222 + x223 + x224 + x321 + x322 + x323 + x324 - s2 = 0
+Bounds
+r >= 0
+x111 >= 0
+x112 >= 0
+x113 >= 0
+x114 >= 0
+x121 >= 0
+x122 >= 0
+x123 >= 0
+x124 >= 0
+x211 >= 0
+x212 >= 0
+x213 >= 0
+x214 >= 0
+x221 >= 0
+x222 >= 0
+x223 >= 0
+x224 >= 0
+x311 >= 0
+x312 >= 0
+x313 >= 0
+x314 >= 0x321 >= 0
+x322 >= 0
+x323 >= 0
+x324 >= 0
+c11 >= 0
+c12 >= 0
+c21 >= 0
+c22 >= 0
+c31 >= 0
+c32 >= 0
+d11 >= 0
+d12 >= 0
+d13 >= 0
+d14 >= 0
+d21 >= 0
+d22 >= 0
+d23 >= 0
+d24 >= 0
+Binary
+u111
+u112
+u113
+u114
+u121
+u122
+u123
+u124
+u211
+u212
+u213
+u214u221
+u222
+u223
+u224
+u311
+u312
+u313
+u314
+u321
+u322
+u323
+u324
+End
